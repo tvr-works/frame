@@ -78,8 +78,8 @@ package struct WindowDropTarget {
             let x = index == 0 ? area.minX : index == columns.count ? area.maxX : boundaries[index]
             let adjacentWidth = min(rects[max(0, index - 1)].width, rects[min(index, rects.count - 1)].width)
             let band = min(12, adjacentWidth / 4)
-            let left = index == 0 ? monitorArea.minX : x - band
-            let right = index == columns.count ? monitorArea.maxX : x + band
+            let left = index == 0 ? monitorArea.minX : min(rects[index - 1].maxX, x - band)
+            let right = index == columns.count ? monitorArea.maxX : max(rects[index].minX, x + band)
             let activation = Rect(topLeftX: left, topLeftY: monitorArea.minY, width: right - left, height: monitorArea.height)
             let preview = Rect(topLeftX: min(max(x - 12, area.minX), max(area.minX, area.maxX - 24)),
                                topLeftY: area.minY, width: min(24, area.width), height: area.height)

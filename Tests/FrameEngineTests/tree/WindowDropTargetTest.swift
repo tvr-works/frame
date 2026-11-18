@@ -32,6 +32,7 @@ final class WindowDropTargetTest: XCTestCase {
     }
 
     func testColumnBoundaryWorksWithZeroGaps() async throws {
+        currentSession.config.gaps = .zero
         let workspace = currentSession.focus.workspace
         let left = workspace.addColumn(after: nil)
         let right = workspace.addColumn(after: nil)
@@ -86,6 +87,35 @@ final class WindowDropTargetTest: XCTestCase {
         target.unbindFromParent()
         XCTAssertFalse(destination.apply(to: a))
         XCTAssertEqual(source.children, [a])
+    }
+
+    func testEntireConfiguredGapCreatesColumn() async throws {
+        currentSession.config.gaps = .zero
+        currentSession.config.gaps.inner.horizontal = .constant(80)
+        let workspace = currentSession.focus.workspace
+        let left = workspace.addColumn(after: nil)
+        let right = workspace.addColumn(after: nil)
+        _ = TestWindow.new(id: 1, parent: left)
+        _ = TestWindow.new(id: 2, parent: right)
+        try await workspace.layoutWorkspace()
+        let l = try XCTUnwrap(left.lastAppliedLayoutPhysicalRect)
+        let r = try XCTUnwrap(right.lastAppliedLayoutPhysicalRect)
+        for x in [l.maxX + 1, (l.maxX + r.minX) / 2, r.minX - 1] {
+            XCTAssertEqual(target(x, l.center.y), .newColumn(workspace: workspace, before: right))
+        }
+    }
+
+    func testMidpointTargetRemainsStableUntilPointerLeavesDeadBand() async throws {
+        let workspace = currentSession.focus.workspace
+        let column = workspace.addColumn(after: nil)
+        let window = TestWindow.new(id: 1, parent: column)
+        try await workspace.layoutWorkspace()
+        let rect = try XCTUnwrap(window.lastAppliedLayoutPhysicalRect)
+        let upper = try XCTUnwrap(WindowDropTarget.resolve(at: CGPoint(x: rect.center.x, y: rect.center.y - 10)))
+        XCTAssertEqual(WindowDropTarget.resolve(at: CGPoint(x: rect.center.x, y: rect.center.y + 2), previous: upper)?.destination,
+                       .insert(column: column, slot: 0))
+        XCTAssertEqual(WindowDropTarget.resolve(at: CGPoint(x: rect.center.x, y: rect.center.y + 6), previous: upper)?.destination,
+                       .insert(column: column, slot: 1))
     }
 
     private func target(_ x: CGFloat, _ y: CGFloat) -> WindowDropDestination? {
