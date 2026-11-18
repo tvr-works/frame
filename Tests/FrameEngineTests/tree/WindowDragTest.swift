@@ -175,6 +175,20 @@ final class WindowDragTest: XCTestCase {
         XCTAssertNil(currentSession.currentlyManipulatedWithMouseWindowId)
     }
 
+    func testStartingDragUpdatesFocusBeforeFocusNotificationRefresh() async throws {
+        let workspace = currentSession.focus.workspace
+        let column = workspace.addColumn(after: nil)
+        let a = TestWindow.new(id: 1, parent: column)
+        let b = TestWindow.new(id: 2, parent: column)
+        XCTAssertTrue(b.focusWindow())
+        try await workspace.layoutWorkspace()
+        XCTAssertTrue(currentSession.beginWindowDrag(a))
+        currentSession.updateWindowDrag(at: try XCTUnwrap(b.lastAppliedLayoutPhysicalRect).center)
+        XCTAssertTrue(currentSession.focus.windowOrNil === a)
+        XCTAssertNotNil(currentSession.windowDrag)
+        XCTAssertNotNil(currentSession.windowDrag?.target)
+    }
+
     func testDisconnectedDestinationMonitorCannotReceiveDrop() async throws {
         let primary = currentSession.platformServices.mainMonitor()
         let secondary = DragTestMonitor()

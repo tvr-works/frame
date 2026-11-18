@@ -39,6 +39,8 @@ extension AppSession {
               workspace.isVisible, !window.isFullscreenOverlay,
               window.lastAppliedLayoutPhysicalRect != nil
         else { return false }
+        // AXMoved may arrive before the refresh that records the newly focused window.
+        guard window.focusWindow() else { return false }
         currentlyManipulatedWithMouseWindowId = window.windowId
         windowDrag = WindowDrag(window: window, column: column, workspace: workspace)
         return true
