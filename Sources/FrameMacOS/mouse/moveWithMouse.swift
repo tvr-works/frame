@@ -9,6 +9,8 @@ func movedObs(_ obs: AXObserver, ax: AXUIElement, notif: CFString, data: UnsafeM
     Task { @MainActor in
         let session = session ?? currentSession
         guard session === currentSession else { return }
+        // Leave late move notifications to the release handler before any refresh can snap the window back.
+        if !isLeftMouseButtonDown && hasPendingMouseMove(session: session) { return }
         guard let windowId, let window = Window.get(byPlatformWindowId: windowId), try await isManipulatedWithMouse(window) else {
             session.scheduleRefreshSession(.ax(notif))
             return
@@ -17,7 +19,7 @@ func movedObs(_ obs: AXObserver, ax: AXUIElement, notif: CFString, data: UnsafeM
             // Resizing a top/left edge also emits AXMoved. Do not start a drag for it.
             guard session.currentlyManipulatedWithMouseWindowId == nil,
                   let initialSize = mouseDownWindowSize(window), let actual = try await window.getRect(),
-                  abs(actual.width - initialSize.width) <= 5, abs(actual.height - initialSize.height) <= 5,
+                  actual.size == initialSize,
                   isLeftMouseButtonDown, session.beginWindowDrag(window)
             else { return }
         }
