@@ -44,6 +44,16 @@ These are intentionally layered: keep direction/number keys the same, add modifi
 
 On landscape monitors (width > height), new tiled windows open in a second column to the right when the workspace has only one column. On portrait or square monitors, or with multiple columns, new windows open at the bottom of the focused column. An empty workspace starts with one column. This behavior requires no configuration.
 
+Drag a tiled window by its title bar to choose its position. A horizontal insertion line marks a slot in an existing column; a vertical outline marks a new column. The other windows stay in place during the drag, and releasing the mouse applies the move.
+
+- Drop over the upper or lower half of a window to insert above or below it. The remaining windows keep their relative order.
+- Drop between columns or at the workspace's left or right edge to create a column. These targets work with zero gaps too.
+- Drop on another monitor to use the same rules in its visible workspace. An empty destination starts with one column, and focus stays on the moved window.
+
+The chosen position takes precedence over automatic new-window placement. With a single existing window, dropping above or below it stacks in the same column, including on landscape monitors; dropping beside it creates a column. Returning to the original slot leaves the arrangement unchanged. An invalid drop returns the window to its managed tile, and successful moves remove empty source columns.
+
+Dragging does not switch to hidden workspaces; use the workspace move shortcuts for those. Excluded windows retain their native movement behavior. Exit fullscreen before dragging a tiled window.
+
 ## Configuration
 
 Frame works without a user config file on first launch. Create `~/.frame.toml` only if you want to customize the defaults:

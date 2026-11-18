@@ -1,5 +1,6 @@
 import AppKit
 import FrameEngine
+import FrameUI
 
 package func makePlatformObservationUnavailableReason(
     frontmostAppBundleId: String?,
@@ -12,6 +13,7 @@ package func makePlatformObservationUnavailableReason(
 
 @MainActor
 func configureFrameMacOSPlatformServices(for session: AppSession) {
+    let dropPreview = WindowDropPreviewController()
     session.platformServices = PlatformServices(
         mainMonitor: {
             mainMonitor()
@@ -35,6 +37,7 @@ func configureFrameMacOSPlatformServices(for session: AppSession) {
             let location = NSEvent.mouseLocation
             return CGPoint(x: location.x, y: NSScreen.screens.first!.frame.maxY - location.y)
         },
+        showWindowDropPreview: { dropPreview.show($0) },
         followFocusedMonitorWithMouse: { target in
             let event = CGEvent(
                 mouseEventSource: nil,

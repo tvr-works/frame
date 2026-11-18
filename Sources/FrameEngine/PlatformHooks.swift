@@ -45,6 +45,7 @@ package struct PlatformServices {
     package var refreshPlatformState: @MainActor @Sendable () async throws -> PlatformRefreshResult
     package var syncUiState: @MainActor @Sendable (_ session: AppSession) -> Void
     package var mouseLocation: @MainActor @Sendable () -> CGPoint
+    package var showWindowDropPreview: @MainActor @Sendable (WindowDropPreview?) -> Void
     package var followFocusedMonitorWithMouse: @MainActor @Sendable (_ target: CGPoint) -> Void
     package var nativeFocusWindow: @MainActor @Sendable (_ app: any WindowPlatformApp, _ windowId: UInt32) -> Void
 
@@ -56,6 +57,7 @@ package struct PlatformServices {
         refreshPlatformState: @escaping @MainActor @Sendable () async throws -> PlatformRefreshResult = { .observed(appSnapshots: []) },
         syncUiState: @escaping @MainActor @Sendable (_ session: AppSession) -> Void = { _ in },
         mouseLocation: @escaping @MainActor @Sendable () -> CGPoint = { .zero },
+        showWindowDropPreview: @escaping @MainActor @Sendable (WindowDropPreview?) -> Void = { _ in },
         followFocusedMonitorWithMouse: @escaping @MainActor @Sendable (_ target: CGPoint) -> Void = { _ in },
         nativeFocusWindow: @escaping @MainActor @Sendable (_ app: any WindowPlatformApp, _ windowId: UInt32) -> Void = { _, _ in },
     ) {
@@ -66,6 +68,7 @@ package struct PlatformServices {
         self.refreshPlatformState = refreshPlatformState
         self.syncUiState = syncUiState
         self.mouseLocation = mouseLocation
+        self.showWindowDropPreview = showWindowDropPreview
         self.followFocusedMonitorWithMouse = followFocusedMonitorWithMouse
         self.nativeFocusWindow = nativeFocusWindow
     }

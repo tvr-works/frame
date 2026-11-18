@@ -107,6 +107,7 @@ extension AppSession {
         garbageCollectUnusedWorkspaces()
         checkFocusCallbacks()
         normalizeAllWorkspaceContainers()
+        validateWindowDrag()
     }
 
     @MainActor

@@ -32,6 +32,7 @@ package final class AppSession {
     // Session-owned seam for platform lookups, refresh, UI sync, and mouse state.
     package var platformServices: PlatformServices
     package var currentlyManipulatedWithMouseWindowId: FrameWindowId? = nil
+    package var windowDrag: WindowDrag? = nil
     nonisolated package let windowEventsDiagnosticsLogger: WindowEventsDiagnosticsLogger
 
     package init(
