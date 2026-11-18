@@ -40,6 +40,7 @@ private let adaptiveWeightBeforeResizeWithMouseKey = TreeNodeUserDataKey<CGFloat
 
 @MainActor
 private func resizeWithMouse(_ window: Window) async throws { // todo cover with tests
+    guard currentSession.windowDrag == nil else { return }
     guard let parent = window.parent else { return }
     guard parent is Column else { return } // Nothing to do for excluded or unconventional windows
     guard let rect = try await window.getRect() else { return }

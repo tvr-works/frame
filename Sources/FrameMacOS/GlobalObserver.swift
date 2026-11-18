@@ -24,11 +24,48 @@ enum GlobalObserver {
         nc.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { onNotif(session: session, $0) }
         nc.addObserver(forName: NSWorkspace.didTerminateApplicationNotification, object: nil, queue: .main) { onNotif(session: session, $0) }
 
-        NSEvent.addGlobalMonitorForEvents(matching: .leftMouseUp) { _ in
-            // todo reduce number of refreshSession in the callback
-            //  resetManipulatedWithMouseIfPossible might call its own refreshSession
-            //  The end of the callback calls refreshSession
+        NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDown) { _ in
             Task { @MainActor in
+                do {
+                    try await recordMouseDownWindowSize(session: session)
+                } catch {
+                    session.scheduleRefreshSession(.globalObserver("mouseDown"))
+                }
+            }
+        }
+
+        NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDragged) { _ in
+            Task { @MainActor in
+                session.updateWindowDrag(at: session.platformServices.mouseLocation())
+            }
+        }
+
+        NSEvent.addGlobalMonitorForEvents(matching: .leftMouseUp) { _ in
+            onLeftMouseUp(session: session)
+        }
+        // A drag can end over Frame's own UI, which global event monitors do not receive.
+        NSEvent.addLocalMonitorForEvents(matching: .leftMouseUp) { event in
+            onLeftMouseUp(session: session)
+            return event
+        }
+    }
+
+    private static func onLeftMouseUp(session: AppSession) {
+        Task { @MainActor in
+            guard session === currentSession else { return }
+            defer {
+                clearMouseDownWindowSizes()
+                session.cancelWindowDrag()
+                session.scheduleRefreshSession(.globalObserverLeftMouseUp)
+            }
+            do {
+                if session.windowDrag != nil {
+                    let pointer = session.platformServices.mouseLocation()
+                    _ = try await session.runLightSession(.globalObserverLeftMouseUp) {
+                        session.finishWindowDrag(at: pointer)
+                    }
+                    return
+                }
                 try await resetManipulatedWithMouseIfPossible()
                 let pointer = session.platformServices.mouseLocation()
                 let clickedMonitor = pointer.monitorApproximation
@@ -44,6 +81,8 @@ enum GlobalObserver {
                     default:
                         session.scheduleRefreshSession(.globalObserverLeftMouseUp)
                 }
+            } catch {
+                // The deferred refresh restores managed geometry even if a native lookup failed.
             }
         }
     }
