@@ -19,9 +19,7 @@ struct MoveCommand: Command {
                     let indexOfCurrent = currentWindow.ownIndex.orDie()
                     let indexOfTarget = indexOfCurrent + direction.focusOffset
                     guard parent.children.indices.contains(indexOfTarget) else { return true }
-                    let prevBinding = currentWindow.unbindFromParent()
-                    currentWindow.bind(to: parent, adaptiveWeight: prevBinding.adaptiveWeight, index: indexOfTarget)
-                    return true
+                    return currentWindow.insert(into: parent, at: indexOfTarget + (direction == .down ? 1 : 0))
             }
         }
         if parent is ExcludedWindowsContainer {
@@ -75,6 +73,5 @@ private let moveOutUnconventionalWindow =
                 }
         }
     }
-    window.bind(to: targetColumn, adaptiveWeight: WEIGHT_AUTO, index: INDEX_BIND_LAST)
-    return true
+    return window.insert(into: targetColumn, at: targetColumn.children.count)
 }
