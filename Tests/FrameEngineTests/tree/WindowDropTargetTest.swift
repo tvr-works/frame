@@ -25,9 +25,10 @@ final class WindowDropTargetTest: XCTestCase {
         let c = TestWindow.new(id: 3, parent: column)
         try await currentSession.focus.workspace.layoutWorkspace()
         let rect = try XCTUnwrap(c.lastAppliedLayoutPhysicalRect)
-        let destination = try XCTUnwrap(target(rect.center.x, rect.maxY - 20))
-        XCTAssertEqual(destination, .insert(column: column, slot: 3))
-        XCTAssertTrue(destination.apply(to: a))
+        let drop = try XCTUnwrap(WindowDropTarget.resolve(at: CGPoint(x: rect.center.x, y: rect.maxY - 20)))
+        XCTAssertEqual(drop.destination, .insert(column: column, slot: 3))
+        XCTAssertEqual(drop.preview.rect.size, CGSize(width: rect.width, height: 2))
+        XCTAssertTrue(drop.destination.apply(to: a))
         XCTAssertEqual(column.children, [b, c, a])
     }
 
@@ -43,9 +44,11 @@ final class WindowDropTargetTest: XCTestCase {
         let l = try XCTUnwrap(left.lastAppliedLayoutPhysicalRect)
         let r = try XCTUnwrap(right.lastAppliedLayoutPhysicalRect)
         let point = CGPoint(x: (l.maxX + r.minX) / 2, y: l.center.y)
-        let destination = try XCTUnwrap(WindowDropTarget.resolve(at: point)?.destination)
-        XCTAssertEqual(destination, .newColumn(workspace: workspace, before: right))
-        XCTAssertTrue(destination.apply(to: a))
+        let drop = try XCTUnwrap(WindowDropTarget.resolve(at: point))
+        XCTAssertEqual(drop.destination, .newColumn(workspace: workspace, before: right))
+        XCTAssertEqual(drop.preview.rect.size, CGSize(width: 2, height: mainMonitor.visibleRect.height))
+        XCTAssertEqual(drop.preview.rect.center.x, point.x)
+        XCTAssertTrue(drop.destination.apply(to: a))
         XCTAssertEqual(workspace.columns.count, 3)
         XCTAssertEqual(workspace.columns[1].children, [a])
     }
@@ -60,9 +63,13 @@ final class WindowDropTargetTest: XCTestCase {
         }
     }
 
-    func testEmptyWorkspaceAndOutsideDisplays() {
+    func testEmptyWorkspaceAndOutsideDisplays() throws {
         let workspace = currentSession.focus.workspace
-        XCTAssertEqual(target(500, 500), .newColumn(workspace: workspace, before: nil))
+        let area = mainMonitor.visibleRectPaddedByOuterGaps
+        let drop = try XCTUnwrap(WindowDropTarget.resolve(at: CGPoint(x: 500, y: 500)))
+        XCTAssertEqual(drop.destination, .newColumn(workspace: workspace, before: nil))
+        XCTAssertEqual(drop.preview.rect.size, CGSize(width: 2, height: area.height))
+        XCTAssertEqual(drop.preview.rect.center, area.center)
         XCTAssertNil(target(-100, -100))
         XCTAssertTrue(workspace.columns.isEmpty)
     }

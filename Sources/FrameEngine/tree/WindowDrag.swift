@@ -49,12 +49,13 @@ extension AppSession {
     @MainActor
     package func updateWindowDrag(at pointer: CGPoint) {
         guard let drag = windowDrag else { return }
-        guard drag.window(in: self) != nil else {
+        guard let window = drag.window(in: self) else {
             cancelWindowDrag()
             return
         }
         drag.update(at: pointer)
-        platformServices.showWindowDropPreview(drag.target?.preview)
+        let preview = drag.target.flatMap { $0.destination.isNoOp(for: window) ? nil : $0.preview }
+        platformServices.showWindowDropPreview(preview)
     }
 
     @MainActor

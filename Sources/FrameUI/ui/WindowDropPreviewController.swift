@@ -28,10 +28,8 @@ package final class WindowDropPreviewController {
         let rect = preview.rect
         let frame = CGRect(x: rect.minX, y: primaryScreen.frame.maxY - rect.maxY, width: rect.width, height: rect.height)
         let layer = panel.contentView?.layer
-        layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(preview.isNewColumn ? 0.22 : 0.95).cgColor
-        layer?.borderColor = NSColor.controlAccentColor.cgColor
-        layer?.borderWidth = preview.isNewColumn ? 2 : 0
-        layer?.cornerRadius = preview.isNewColumn ? 6 : 2
+        layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.95).cgColor
+        layer?.cornerRadius = min(rect.width, rect.height) / 2
         panel.setFrame(frame, display: true)
         panel.orderFrontRegardless()
     }

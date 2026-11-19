@@ -13,19 +13,32 @@ package enum WindowDropDestination: Equatable {
     }
 
     @MainActor
+    func isNoOp(for window: Window) -> Bool {
+        guard let source = window.column else { return false }
+        switch self {
+            case .insert(let column, let slot):
+                guard source === column, let index = window.ownIndex else { return false }
+                // Slots on both sides of the window resolve to its current index after removal.
+                return slot == index || slot == index + 1
+            case .newColumn(let workspace, let before):
+                guard source.nodeWorkspace === workspace, source.children.count == 1,
+                      let index = source.ownIndex
+                else { return false }
+                let slot = before?.ownIndex ?? workspace.columns.count
+                return slot == index || slot == index + 1
+        }
+    }
+
+    @MainActor
     @discardableResult
     package func apply(to window: Window) -> Bool {
-        guard let sourceColumn = window.column, let workspace, workspace.isVisible else { return false }
+        guard window.column != nil, let workspace, workspace.isVisible else { return false }
         switch self {
             case .insert(let column, let slot):
                 return window.insert(into: column, at: slot)
             case .newColumn(_, let before):
                 guard before == nil || before?.parent === workspace.columnsRoot else { return false }
-                let index = before?.ownIndex ?? workspace.columns.count
-                // Moving a sole window immediately beside its own column changes nothing.
-                if sourceColumn.nodeWorkspace === workspace, sourceColumn.children.count == 1,
-                   let sourceIndex = sourceColumn.ownIndex, index == sourceIndex || index == sourceIndex + 1
-                { return true }
+                if isNoOp(for: window) { return true }
                 let column = before.map { workspace.addColumn(before: $0) } ?? workspace.addColumn(after: nil)
                 return window.insert(into: column, at: 0)
         }
@@ -34,10 +47,11 @@ package enum WindowDropDestination: Equatable {
 
 package struct WindowDropPreview {
     package let rect: Rect
-    package let isNewColumn: Bool
 }
 
 package struct WindowDropTarget {
+    private static let previewThickness: CGFloat = 2
+
     package let destination: WindowDropDestination
     package let preview: WindowDropPreview
     // A small dead band keeps the target stable when the pointer crosses a midpoint.
@@ -57,17 +71,18 @@ package struct WindowDropTarget {
            current.activationRect.expanded(by: 4).contains(pointer)
         { return current }
         if columns.isEmpty { return targets.first }
-        // Column boundaries have priority over insertion slots, including with zero gaps.
-        return targets.first(where: { $0.preview.isNewColumn && $0.activationRect.contains(pointer) })
-            ?? targets.first(where: { !$0.preview.isNewColumn && $0.activationRect.contains(pointer) })
+        // Candidates list column boundaries first so they win even with zero gaps.
+        return targets.first(where: { $0.activationRect.contains(pointer) })
     }
 
     @MainActor
     private static func candidates(workspace: Workspace, area: Rect) -> [WindowDropTarget] {
         let columns = workspace.columns
+        let lineWidth = min(previewThickness, area.width)
         if columns.isEmpty {
+            let preview = Rect(topLeftX: area.center.x - lineWidth / 2, topLeftY: area.minY, width: lineWidth, height: area.height)
             return [WindowDropTarget(destination: .newColumn(workspace: workspace, before: nil),
-                                     preview: WindowDropPreview(rect: area, isNewColumn: true), activationRect: area)]
+                                     preview: WindowDropPreview(rect: preview), activationRect: area)]
         }
         let monitorArea = workspace.workspaceMonitor.visibleRect
         let rects = columns.compactMap(\.lastAppliedLayoutPhysicalRect)
@@ -81,11 +96,12 @@ package struct WindowDropTarget {
             let left = index == 0 ? monitorArea.minX : min(rects[index - 1].maxX, x - band)
             let right = index == columns.count ? monitorArea.maxX : max(rects[index].minX, x + band)
             let activation = Rect(topLeftX: left, topLeftY: monitorArea.minY, width: right - left, height: monitorArea.height)
-            let preview = Rect(topLeftX: min(max(x - 12, area.minX), max(area.minX, area.maxX - 24)),
-                               topLeftY: area.minY, width: min(24, area.width), height: area.height)
+            let preview = Rect(topLeftX: min(max(x - lineWidth / 2, area.minX), area.maxX - lineWidth),
+                               topLeftY: area.minY, width: lineWidth, height: area.height)
             result.append(WindowDropTarget(destination: .newColumn(workspace: workspace, before: columns.getOrNil(atIndex: index)),
-                                           preview: WindowDropPreview(rect: preview, isNewColumn: true), activationRect: activation))
+                                           preview: WindowDropPreview(rect: preview), activationRect: activation))
         }
+        let lineHeight = min(previewThickness, area.height)
         for (index, column) in columns.enumerated() {
             let windows = column.children.compactMap { $0 as? Window }
             let windowRects = windows.compactMap(\.lastAppliedLayoutPhysicalRect)
@@ -99,10 +115,10 @@ package struct WindowDropTarget {
                 let left = result[index].activationRect.maxX
                 let right = result[index + 1].activationRect.minX
                 let activation = Rect(topLeftX: left, topLeftY: top, width: right - left, height: bottom - top)
-                let preview = Rect(topLeftX: rects[index].minX, topLeftY: max(area.minY, min(lineY - 2, area.maxY - 4)),
-                                   width: rects[index].width, height: 4)
+                let preview = Rect(topLeftX: rects[index].minX, topLeftY: max(area.minY, min(lineY - lineHeight / 2, area.maxY - lineHeight)),
+                                   width: rects[index].width, height: lineHeight)
                 result.append(WindowDropTarget(destination: .insert(column: column, slot: slot),
-                                               preview: WindowDropPreview(rect: preview, isNewColumn: false), activationRect: activation))
+                                               preview: WindowDropPreview(rect: preview), activationRect: activation))
             }
         }
         return result

@@ -16,6 +16,34 @@ private struct DragTestMonitor: Monitor {
 final class WindowDragTest: XCTestCase {
     override func setUp() async throws { setUpWorkspacesForTests() }
 
+    func testLoneWindowOnlyPreviewsDropsOnAnotherMonitor() async throws {
+        let primary = currentSession.platformServices.mainMonitor()
+        let secondary = DragTestMonitor()
+        currentSession.platformServices.monitors = { [primary, secondary] }
+        let workspace = currentSession.focus.workspace
+        XCTAssertTrue(secondary.setActiveWorkspace(Workspace.get(byName: "empty")))
+        let column = workspace.addColumn(after: nil)
+        let window = TestWindow.new(id: 1, parent: column)
+        XCTAssertTrue(window.focusWindow())
+        try await workspace.layoutWorkspace()
+        let tile = try XCTUnwrap(window.lastAppliedLayoutPhysicalRect)
+        let upper = CGPoint(x: tile.center.x, y: tile.minY + 20)
+        let lower = CGPoint(x: tile.center.x, y: tile.maxY - 20)
+        let left = CGPoint(x: primary.visibleRect.minX + 1, y: tile.center.y)
+        let right = CGPoint(x: primary.visibleRect.maxX - 1, y: tile.center.y)
+        var previews: [Bool] = []
+        currentSession.platformServices.showWindowDropPreview = { previews.append($0 != nil) }
+
+        XCTAssertTrue(currentSession.beginWindowDrag(window))
+        for point in [upper, lower, left, right, secondary.visibleRect.center, upper] {
+            currentSession.updateWindowDrag(at: point)
+        }
+        XCTAssertEqual(previews, [false, false, false, false, true, false])
+        XCTAssertTrue(currentSession.finishWindowDrag(at: upper))
+        XCTAssertEqual(workspace.columns, [column])
+        XCTAssertEqual(column.children, [window])
+    }
+
     func testHoverDoesNotReorderAndReleaseCommitsOnce() async throws {
         let workspace = currentSession.focus.workspace
         let column = workspace.addColumn(after: nil)
@@ -53,9 +81,14 @@ final class WindowDragTest: XCTestCase {
         XCTAssertTrue(a.focusWindow())
         try await workspace.layoutWorkspace()
         let original = try XCTUnwrap(a.lastAppliedLayoutPhysicalRect).center
-        let away = try XCTUnwrap(b.lastAppliedLayoutPhysicalRect).center
+        let next = try XCTUnwrap(b.lastAppliedLayoutPhysicalRect)
+        let away = CGPoint(x: next.center.x, y: next.maxY - 20)
+        var previews: [Bool] = []
+        currentSession.platformServices.showWindowDropPreview = { previews.append($0 != nil) }
         XCTAssertTrue(currentSession.beginWindowDrag(a))
         currentSession.updateWindowDrag(at: away)
+        currentSession.updateWindowDrag(at: original)
+        XCTAssertEqual(previews, [true, false])
         XCTAssertTrue(currentSession.finishWindowDrag(at: original))
         XCTAssertEqual(column.children, [a, b])
         XCTAssertTrue(currentSession.beginWindowDrag(a))
