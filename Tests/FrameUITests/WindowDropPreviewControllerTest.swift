@@ -12,9 +12,9 @@ final class WindowDropPreviewControllerTest: XCTestCase {
         let keyWindowBefore = app.keyWindow
         let controller = WindowDropPreviewController()
         defer { controller.show(nil) }
-        let rect = Rect(topLeftX: screen.frame.minX + 100, topLeftY: 100, width: 300, height: 4)
+        let rect = Rect(topLeftX: screen.frame.minX + 100, topLeftY: 100, width: 300, height: 2)
 
-        controller.show(WindowDropPreview(rect: rect, isNewColumn: false))
+        controller.show(WindowDropPreview(rect: rect))
 
         let panel = try XCTUnwrap(app.windows.first { !windowsBefore.contains(ObjectIdentifier($0)) } as? NSPanel)
         defer { panel.close() }
@@ -22,7 +22,7 @@ final class WindowDropPreviewControllerTest: XCTestCase {
         XCTAssertTrue(panel.ignoresMouseEvents)
         XCTAssertTrue(panel.styleMask.contains(.nonactivatingPanel))
         XCTAssertTrue(app.keyWindow === keyWindowBefore)
-        XCTAssertEqual(panel.frame.size, CGSize(width: 300, height: 4))
+        XCTAssertEqual(panel.frame.size, CGSize(width: 300, height: 2))
         XCTAssertEqual(panel.contentView?.bounds.size, panel.frame.size)
         XCTAssertFalse(panel.isOpaque)
 
@@ -40,10 +40,10 @@ final class WindowDropPreviewControllerTest: XCTestCase {
         var previewPanel: NSWindow?
 
         for screen in NSScreen.screens {
-            let expected = CGRect(x: screen.frame.minX + 100, y: screen.frame.minY + 100, width: 24, height: 300)
+            let expected = CGRect(x: screen.frame.minX + 100, y: screen.frame.minY + 100, width: 2, height: 300)
             let rect = Rect(topLeftX: expected.minX, topLeftY: primary.frame.maxY - expected.maxY,
                             width: expected.width, height: expected.height)
-            controller.show(WindowDropPreview(rect: rect, isNewColumn: true))
+            controller.show(WindowDropPreview(rect: rect))
             let panels = app.windows.filter { !windowsBefore.contains(ObjectIdentifier($0)) }
             XCTAssertEqual(panels.count, 1)
             let panel = try XCTUnwrap(panels.first)

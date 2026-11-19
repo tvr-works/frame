@@ -44,7 +44,7 @@ These are intentionally layered: keep direction/number keys the same, add modifi
 
 On landscape monitors (width > height), new tiled windows open in a second column to the right when the workspace has only one column. On portrait or square monitors, or with multiple columns, new windows open at the bottom of the focused column. An empty workspace starts with one column. This behavior requires no configuration.
 
-Drag a tiled window by its title bar to choose its position. A horizontal insertion line marks a slot in an existing column; a vertical outline marks a new column. The other windows stay in place during the drag, and releasing the mouse applies the move.
+Drag a tiled window by its title bar to choose its position. A thin horizontal line marks a slot in an existing column, and a thin vertical line marks a new column. Previews appear only where a drop would change the layout. The other windows stay in place during the drag, and releasing the mouse applies the move.
 
 - Drop over the upper or lower half of a window to insert above or below it. The remaining windows keep their relative order.
 - Drop between columns or at the workspace's left or right edge to create a column. These targets work with zero gaps too.
